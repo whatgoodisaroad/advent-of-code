@@ -29,6 +29,6 @@ main = do
   f <- readFile "day05.input.txt"
   let ids = sort $ map (\(_, _, i) -> i) $ map toSeat $ map toPair $ lines f
   putStr "Part 1: "
-  print $ maximum ids
+  print $ last ids
   putStr "Part 2: "
   print $ findGap ids
