@@ -24,10 +24,6 @@ seedToState = foldr1 addS . map (num 0)
 days :: [Int] -> [[Int]]
 days seed = seed : (days $ nextS seed)
 
-parseFile :: String -> [Int]
-parseFile [] = []
-parseFile (c:',':cs) = read [c] : parseFile cs
-
 main = do
   f <- readFile "day06.input.txt"
   let seed = seedToState $ read $ "[" ++ f ++ "]"
