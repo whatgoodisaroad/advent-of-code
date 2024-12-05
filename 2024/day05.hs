@@ -80,12 +80,46 @@ swap u i1 i2
 
 repairUpdate :: [Rule] -> Update -> Update
 repairUpdate rs u
-  = foldr (\v u -> uncurry (swap u) v) u
-  $ sortOn snd
-  $ catMaybes $ map (flip violation u) rs
- 
+  = foldr f u
+  $ sortRules
+  $ relevantRules u rs
+  where
+    f :: Rule -> Update -> Update
+    f r u = case violation r u of
+      Nothing -> u
+      Just (v1, v2) -> swap u v1 v2
+
+ruleRanks :: [Rule] -> [Int]
+ruleRanks rs = map (0-) $ ranks
+  where
+    ranks :: [Int]
+    ranks
+      = flip map rs
+      $ \(r1, r2) 
+        -> succ
+        $ sum
+        $ map (\i -> succ $ ranks !! i)
+        $ findIndices (==r2)
+        $ map fst rs
+
+sortRules :: [Rule] -> [Rule]
+sortRules rs = map fst $ sortOn snd $ zip rs $ ruleRanks rs
+
+relevantRules :: Update -> [Rule] -> [Rule]
+relevantRules us rs
+  = flip filter rs
+  $ \(r1, r2) -> elem r1 us && elem r2 us 
+
+part2 :: [Rule] -> [Update] -> Int
+part2 rs us
+  = sum
+  $ map (middle . repairUpdate rs)
+  $ filter (not . validUpdate rs) us
+
 main = do
   f <- lines <$> readFile "day05.input.txt"
   let (rules, updates) = parse f
   putStr "Part 1: "
   print $ part1 rules updates
+  putStr "Part 2: "
+  print $ part2 rules updates
