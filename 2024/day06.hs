@@ -35,17 +35,21 @@ parse g = (rows, cols, obstacles, pos, dir)
       return (row, col)
     dir = g !! fst pos !! snd pos
 
-path :: State -> [State]
-path s@(rs, cs, os, (row, col), dir)
+path :: Bool -> State -> [(Pos, Char)]
+path corners s@(rs, cs, os, (row, col), dir)
   -- Check edges
   | dir == '^' && row == -1 = []
   | dir == '<' && col == -1 = []
   | dir == 'v' && row == rs = []
   | dir == '>' && col == cs = []
   -- Check obstacles
-  | elem pos' os = path (rs, cs, os, (row, col), dir')
+  | elem pos' os
+    = (if corners then [posdir] else [])
+    ++ path corners (rs, cs, os, (row, col), dir')
   -- Move
-  | otherwise = s : path (rs, cs, os, pos', dir)
+  | otherwise
+    = (if corners then [] else [posdir])
+    ++ path corners (rs, cs, os, pos', dir)
   where
     pos' = case dir of
       '^' -> (pred row, col)
@@ -57,15 +61,13 @@ path s@(rs, cs, os, (row, col), dir)
       '>' -> 'v'
       'v' -> '<'
       '<' -> '^'
-
-getPos :: State -> Pos
-getPos (_, _, _, p, _) = p
+    posdir = ((row, col), dir)
 
 part1 :: State -> Int
-part1 = length . nub . map getPos . path
+part1 = length . nub . map fst . path False
 
-isLoop :: [State] -> Bool
-isLoop = l [] . map (\(_, _, _, p, d) -> (p, d))
+isLoop :: [(Pos, Char)] -> Bool
+isLoop = l []
   where
     l :: [(Pos, Char)] -> [(Pos, Char)] -> Bool
     l v [] = False
@@ -74,10 +76,10 @@ isLoop = l [] . map (\(_, _, _, p, d) -> (p, d))
 part2 :: State -> Int
 part2 (rs, cs, os, pos, dir)
   = length
-  $ filter (\o -> isLoop $ path (rs, cs, o:os, pos, dir))
+  $ filter (\o -> isLoop $ path True (rs, cs, o:os, pos, dir))
   $ nub
-  $ map getPos
-  $ path (rs, cs, os, pos, dir)
+  $ map fst
+  $ path False (rs, cs, os, pos, dir)
 
 main = do
   f <- lines <$> readFile "day06.input.txt"
