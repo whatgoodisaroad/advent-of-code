@@ -17,53 +17,58 @@ sample = [
     "............"
   ]
 
-s = [
-    "......",
-    "..x...",
-    "..x...",
-    "......",
-    "......",
-    "......",
-    "......",
-    "......"
-  ]
-
 freqs :: [String] -> [Char]
 freqs = nub . filter (/= '.') . concat
 
-locations :: [String] -> Char -> [((Int, Int))]
+locations :: [String] -> Char -> [(Int, Int)]
 locations m freq = do
   row <- [ 0 .. pred $ length m ]
   col <- [ 0 .. pred $ length $ m !! row ]
   guard $ m !! row !! col == freq
   return (row, col)
 
-antinodes :: [((Int, Int))] -> [((Int, Int))]
+harmonics :: (Int, Int) -> (Int, Int) -> [(Int, Int)]
+harmonics (r1, c1) (r2, c2)
+  = flip map [1..] $ \i -> (r1 + (r2 - r1) * i, c1 + (c2 - c1) * i)
+
+antinodes :: [(Int, Int)] -> [(Int, Int)]
 antinodes ls = nub $ do
   i1 <- [0 .. pred $ length ls]
-  let (r1, c1) = ls !! i1
-  (r2, c2) <- drop i1 ls
-  let (dr, dc) = (r1 - r2, c1 - c2)
-  filter (not . flip elem ls) [(r1 + dr, c1 + dc), (r2 - dr, c2 - dc)]
+  let p1 = ls !! i1
+  p2 <- drop (succ i1) ls
+  let notAntenna = filter (not . flip elem ls) 
+  (take 1 $ notAntenna $ harmonics p1 p2) ++ (take 1 $ notAntenna $ harmonics p2 p1)
 
-bound :: [String] -> [(Int, Int)] -> [(Int, Int)]
-bound m = let (rmax, cmax) = (length m, length $ m !! 0)
-  in filter $ \(row, col)
-    -> row >= 0
-    && col >= 0
-    && row < rmax
-    && col < cmax
+resonances :: [String] -> [(Int, Int)] -> [(Int, Int)]
+resonances m ls = do
+  i1 <- [0 .. pred $ length ls]
+  let p1 = ls !! i1
+  p2 <- drop (succ i1) ls
+  (takeWhile (inBounds m) $ harmonics p1 p2) ++ (takeWhile (inBounds m) $ harmonics p2 p1)
+
+inBounds :: [String] -> (Int, Int) -> Bool
+inBounds m (row, col)
+  = let (rmax, cmax) = (length m, length $ m !! 0)
+    in row >= 0 && col >= 0 && row < rmax && col < cmax
 
 part1 :: [String] -> Int
 part1 m
   = length
   $ nub
-  $ bound m
-  $ concat
-  $ map (antinodes . locations m)
+  $ filter (inBounds m)
+  $ concatMap (antinodes . locations m)
+  $ freqs m
+
+part2 :: [String] -> Int
+part2 m
+  = length
+  $ nub
+  $ concatMap (resonances m . locations m)
   $ freqs m
 
 main = do
   f <- lines <$> readFile "day08.input.txt"
   putStr "Part 1: "
   print $ part1 f
+  putStr "Part 2: "
+  print $ part2 f
